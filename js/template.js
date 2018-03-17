@@ -39,7 +39,7 @@ function getMarkupForTemlate(templateName, elem){
     } 
     else{
         tagCache.set(templateName,new TagCache(elem));
-      fetch("/_layout/"+templateName+".html")
+      fetch("/layout/"+templateName+".html")
     .then(function(response) {
         if(response.ok) {
           return response.text();
