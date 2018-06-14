@@ -12,14 +12,31 @@ class TagCache {
     constructor(elem){
         this.list = new Array(elem);
         this.cachedValue= null;
+
+        this.createTemplate= (template) =>{
+            return values => template.replace(/\{\{(.+?)\}\}/g, (_, k) => values[k.toLowerCase()] || "{{"+k+"}}");
+          };
+
+        this.applyTemplate = (element)=>{
+            var atts = Array.from(element.attributes).filter(function(att, index, self){
+                return att.name.startsWith(templateTagString+"-") && self.indexOf(att) === index;
+            }).reduce((o,att)=>Object.assign(o,{[att.name.replace(templateTagString+"-","")]:att.value}),{});
+            element.innerHTML = this.createTemplate(this.cachedValue)(atts);
+            runTemplate(element);
+        }
+
+        this.add = (element) =>{
+            if(this.cachedValue != null){
+                this.applyTemplate(element);
+            }
+            this.list.push(element);
+        }
     }
 
     set cache(value){
         this.cachedValue = value;
 
-        this.list.forEach(element => {
-            element.innerHTML = value;
-        });
+        this.list.forEach(this.applyTemplate);
     }
     get cache(){
         return this.cachedValue;
@@ -30,12 +47,7 @@ function getMarkupForTemlate(templateName, elem){
     
     
     if (tagCache.get(templateName)!=null){
-        if ( tagCache.get(templateName).cachedValue == null){
-            tagCache.get(templateName).list.push(elem);
-        }else{
-            elem.innerHTML = tagCache.get(templateName).cachedValue;
-        }
-         
+        tagCache.get(templateName).add(elem)         
     } 
     else{
         tagCache.set(templateName,new TagCache(elem));
@@ -49,8 +61,7 @@ function getMarkupForTemlate(templateName, elem){
       }).then(function(html) {
         tagCache.get(templateName).cache=html;
         
-      })
-      .catch(function(value,index,  error) {
+      }).catch(function(value,index,  error) {
         console.log('Il y a eu un problème avec l\'opération fetch: ' + error.message);
       });  
     }
@@ -94,5 +105,14 @@ function getAllPageTemplateTag() {
     registerTemplateTags(filteredTags);
 }
 
-getAllPageTemplateTag();
+function runTemplate(element){
+    var tags = element.getElementsByTagName("*");
+    var filteredTags = Array.from(tags,item => item.tagName.toLowerCase()).filter(function(value, index, self){
+        return value.startsWith(templateTagString+"-") && self.indexOf(value) === index;
+    });
+    console.log(" Number of custom tag: "+filteredTags.length)
+    registerTemplateTags(filteredTags);
+}
+runTemplate(document.body);
+//getAllPageTemplateTag();
 
